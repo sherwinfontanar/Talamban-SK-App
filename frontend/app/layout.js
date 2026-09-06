@@ -1,11 +1,18 @@
+import { Lora, IBM_Plex_Sans, IBM_Plex_Mono } from 'next/font/google';
+import './globals.css';
+
+const lora = Lora({ subsets: ['latin'], variable: '--font-serif', weight: ['500', '600'] });
+const plexSans = IBM_Plex_Sans({ subsets: ['latin'], variable: '--font-sans', weight: ['400', '500', '600'] });
+const plexMono = IBM_Plex_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['500'] });
+
 export const metadata = {
-  title: 'SK Document Requests',
+  title: 'Barangay Talamban SK — Document Requests',
   description: 'Request barangay documents online, skip the line at claim time.',
 };
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${lora.variable} ${plexSans.variable} ${plexMono.variable}`}>
       <body>{children}</body>
     </html>
   );

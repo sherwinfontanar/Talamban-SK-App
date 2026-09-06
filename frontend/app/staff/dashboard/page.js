@@ -1,53 +1,74 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
+import Masthead from '../../components/Masthead';
+import { api } from '../../lib/api';
 
 export default function StaffDashboardPage() {
   const [stats, setStats] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    async function load() {
-      // TODO: attach staff auth token from localStorage/session
-      const token = localStorage.getItem('sk_token');
-      const res = await fetch(`${API_URL}/admin/dashboard`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (res.ok) setStats(await res.json());
-    }
-    load();
+    api.get('/admin/dashboard').then(setStats).catch((err) => setError(err.message));
   }, []);
 
-  if (!stats) return <main style={{ padding: '2rem' }}>Loading dashboard…</main>;
-
   return (
-    <main style={{ maxWidth: 640, margin: '0 auto', padding: '2rem' }}>
-      <h1>Staff dashboard</h1>
+    <div className="page">
+      <Masthead nav="staff" />
+      <main className="content content--wide">
+        <h1>Dashboard</h1>
 
-      <section>
-        <h2>Requests by status</h2>
-        <ul>
-          {Object.entries(stats.by_status).map(([status, count]) => (
-            <li key={status}>{status}: {count}</li>
-          ))}
-        </ul>
-      </section>
+        {error && (
+          <div className="notice notice-danger">
+            <p>{error}</p>
+          </div>
+        )}
 
-      <section>
-        <h2>Requests by document type</h2>
-        <ul>
-          {Object.entries(stats.by_document_type).map(([type, count]) => (
-            <li key={type}>{type}: {count}</li>
-          ))}
-        </ul>
-      </section>
+        {!stats && !error && <p className="muted">Loading…</p>}
 
-      <p><strong>Pending payments:</strong> {stats.pending_payments_count}</p>
-      <p><strong>Total fees collected:</strong> ₱{stats.total_fees_collected}</p>
-      <p><strong>Avg turnaround:</strong> {stats.avg_turnaround_hours ?? 'N/A'} hours</p>
+        {stats && (
+          <>
+            <div className="stat-grid">
+              <div className="stat-cell">
+                <div className="stat-value">{stats.pending_payments_count}</div>
+                <div className="stat-label">Pending payments</div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-value">₱{stats.total_fees_collected}</div>
+                <div className="stat-label">Fees collected</div>
+              </div>
+              <div className="stat-cell">
+                <div className="stat-value">{stats.avg_turnaround_hours ?? '—'}</div>
+                <div className="stat-label">Avg. turnaround (hrs)</div>
+              </div>
+            </div>
 
-      {/* TODO: link to /staff/requests queue view for review/approve/reject/claim actions */}
-    </main>
+            <h2>By status</h2>
+            <table className="table" style={{ marginBottom: '2rem' }}>
+              <tbody>
+                {Object.entries(stats.by_status).map(([status, count]) => (
+                  <tr key={status}>
+                    <td>{status.replace(/_/g, ' ')}</td>
+                    <td style={{ textAlign: 'right' }}>{count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h2>By document type</h2>
+            <table className="table">
+              <tbody>
+                {Object.entries(stats.by_document_type).map(([type, count]) => (
+                  <tr key={type}>
+                    <td>{type.replace(/_/g, ' ')}</td>
+                    <td style={{ textAlign: 'right' }}>{count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </>
+        )}
+      </main>
+    </div>
   );
 }

@@ -1,14 +1,43 @@
 import { Router } from 'express';
+import multer from 'multer';
+import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { supabase } from '../config/supabaseClient.js';
 import { attachUser, requireRole } from '../middleware/auth.js';
+import { sendStatusEmail, sendReadyForClaimEmail } from '../utils/email.js';
+import { sendPushToRequest } from '../utils/push.js';
 
 const router = Router();
 router.use(attachUser);
 
+// Files go straight to Supabase Storage (private bucket), not local disk —
+// Render's free tier has ephemeral storage that wipes on redeploy.
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 8 * 1024 * 1024 }, // 8MB
+});
+
+const ALLOWED_DOC_KINDS = ['proof_of_billing', 'valid_id', 'other'];
+
 function normalize(str = '') {
   return str.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+// A request's notification email is either the linked account's email or
+// the guest_email captured at submission time.
+async function getRecipientEmail(request) {
+  if (request.guest_email) return request.guest_email;
+  if (request.user_id) {
+    const { data: user } = await supabase.from('users').select('email').eq('id', request.user_id).single();
+    return user?.email ?? null;
+  }
+  return null;
+}
+
+function statusUrlFor(request) {
+  const emailParam = request.guest_email ? `?guest_email=${encodeURIComponent(request.guest_email)}` : '';
+  return `${process.env.FRONTEND_URL}/request/status/${request.id}${emailParam}`;
 }
 
 // POST /requests
@@ -74,9 +103,61 @@ router.post('/', async (req, res) => {
 });
 
 // POST /requests/:id/documents
-// TODO: multer + Supabase Storage upload for proof_of_billing / valid_id (optional)
-router.post('/:id/documents', async (req, res) => {
-  res.status(501).json({ error: 'Not implemented yet — wire up multer + Supabase Storage' });
+// Optional resident-uploaded attachments (proof of billing, valid ID).
+// multipart/form-data: fields `file` and `file_kind`.
+router.post('/:id/documents', upload.single('file'), async (req, res) => {
+  const { file_kind } = req.body;
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  if (!ALLOWED_DOC_KINDS.includes(file_kind)) {
+    return res.status(400).json({ error: `file_kind must be one of ${ALLOWED_DOC_KINDS.join(', ')}` });
+  }
+
+  const { data: request } = await supabase.from('requests').select('id, user_id, guest_email').eq('id', req.params.id).single();
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+
+  const isOwner = req.user?.id === request.user_id || req.query.guest_email === request.guest_email;
+  if (!isOwner) return res.status(403).json({ error: 'Not authorized to attach files to this request' });
+
+  const path = `${request.id}/${file_kind}-${uuidv4()}-${req.file.originalname}`;
+  const { error: uploadError } = await supabase.storage
+    .from('id-documents')
+    .upload(path, req.file.buffer, { contentType: req.file.mimetype });
+
+  if (uploadError) return res.status(500).json({ error: uploadError.message });
+
+  const { data: doc, error } = await supabase
+    .from('request_documents')
+    .insert({ request_id: request.id, file_url: path, file_kind })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  await supabase.from('audit_logs').insert({
+    actor_id: req.user?.id ?? null,
+    action: 'request.document_uploaded',
+    request_id: request.id,
+    details: { file_kind },
+  });
+
+  res.status(201).json({ document: doc });
+});
+
+// GET /requests/:id/documents/:docId/url  (staff only — signed URL to a private file)
+router.get('/:id/documents/:docId/url', requireRole('secretary', 'kagawad', 'treasurer'), async (req, res) => {
+  const { data: doc } = await supabase
+    .from('request_documents')
+    .select('file_url')
+    .eq('id', req.params.docId)
+    .eq('request_id', req.params.id)
+    .single();
+
+  if (!doc) return res.status(404).json({ error: 'Document not found' });
+
+  const { data, error } = await supabase.storage.from('id-documents').createSignedUrl(doc.file_url, 60 * 5);
+  if (error) return res.status(500).json({ error: error.message });
+
+  res.json({ url: data.signedUrl });
 });
 
 // GET /requests/:id
@@ -149,7 +230,6 @@ router.patch('/:id/review', requireRole('secretary', 'kagawad'), async (req, res
         normalized_name: normalize(request.full_name),
       });
     }
-    // TODO: send "ready for claim" email + push notification with claim_code/qr_code_url
   }
 
   const { data: updated, error } = await supabase
@@ -167,6 +247,35 @@ router.patch('/:id/review', requireRole('secretary', 'kagawad'), async (req, res
     request_id: request.id,
     details: { rejection_reason: rejection_reason ?? null },
   });
+
+  // Notify — never let a notification failure block the response, since the
+  // status change itself already succeeded.
+  const recipientEmail = await getRecipientEmail(updated);
+  if (recipientEmail) {
+    if (nextStatus === 'ready_for_claim') {
+      sendReadyForClaimEmail(recipientEmail, {
+        documentType: updated.document_type,
+        claimCode: updated.claim_code,
+        statusUrl: statusUrlFor(updated),
+      }).catch(() => {});
+    } else {
+      sendStatusEmail(recipientEmail, {
+        documentType: updated.document_type,
+        status: nextStatus,
+        rejectionReason: updated.rejection_reason,
+        statusUrl: statusUrlFor(updated),
+      }).catch(() => {});
+    }
+  }
+
+  sendPushToRequest(updated.id, {
+    title: nextStatus === 'ready_for_claim' ? 'Ready for claim' : 'Request update',
+    body:
+      nextStatus === 'ready_for_claim'
+        ? `Your claim code is ${updated.claim_code}`
+        : `Your request is now: ${nextStatus.replace(/_/g, ' ')}`,
+    url: statusUrlFor(updated),
+  }).catch(() => {});
 
   res.json({ request: updated });
 });
