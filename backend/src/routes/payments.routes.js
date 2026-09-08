@@ -55,6 +55,20 @@ router.post('/:requestId/receipt', upload.single('file'), async (req, res) => {
   const isOwner = req.user?.id === request.user_id || req.query.guest_email === request.guest_email;
   if (!isOwner) return res.status(403).json({ error: 'Not authorized to pay for this request' });
 
+  // Guard against double-submits (double-click, resubmitted form, or a
+  // direct repeat call) creating a second payment while one is already
+  // awaiting the treasurer's review.
+  const { data: existingPending } = await supabase
+    .from('payments')
+    .select('id')
+    .eq('request_id', request.id)
+    .eq('status', 'pending')
+    .maybeSingle();
+
+  if (existingPending) {
+    return res.status(409).json({ error: 'A receipt for this request is already pending verification' });
+  }
+
   const path = `${request.id}/receipt-${uuidv4()}-${req.file.originalname}`;
   const { error: uploadError } = await supabase.storage
     .from('receipts')
@@ -114,6 +128,9 @@ router.patch('/:id/verify', requireRole('treasurer'), async (req, res) => {
   if (!['verified', 'rejected'].includes(decision)) {
     return res.status(400).json({ error: "decision must be 'verified' or 'rejected'" });
   }
+  if (decision === 'rejected' && !rejection_reason) {
+    return res.status(400).json({ error: 'rejection_reason is required when rejecting' });
+  }
 
   const { data: payment } = await supabase.from('payments').select('*').eq('id', req.params.id).single();
   if (!payment) return res.status(404).json({ error: 'Payment not found' });
@@ -130,6 +147,10 @@ router.patch('/:id/verify', requireRole('treasurer'), async (req, res) => {
 
   let nextRequestStatus = decision === 'verified' ? 'paid' : 'payment_rejected';
   const updatePayload = { status: nextRequestStatus };
+
+  if (decision === 'rejected') {
+    updatePayload.rejection_reason = rejection_reason;
+  }
 
   if (nextRequestStatus === 'paid') {
     // Auto-advance straight to ready_for_claim once paid, generating the claim code.

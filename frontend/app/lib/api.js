@@ -42,3 +42,8 @@ export function getCurrentUser() {
   const raw = localStorage.getItem('sk_user');
   return raw ? JSON.parse(raw) : null;
 }
+
+export function logout() {
+  localStorage.removeItem('sk_token');
+  localStorage.removeItem('sk_user');
+}

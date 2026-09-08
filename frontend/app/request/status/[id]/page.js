@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import Masthead from '../../../components/Masthead';
 import StatusTag from '../../../components/StatusTag';
@@ -17,6 +17,7 @@ export default function RequestStatusPage() {
   const [error, setError] = useState(null);
   const [receiptFile, setReceiptFile] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const receiptInputRef = useRef(null);
   const [pushState, setPushState] = useState('idle'); // idle | subscribing | subscribed | error
   const [pushError, setPushError] = useState(null);
 
@@ -36,13 +37,21 @@ export default function RequestStatusPage() {
 
   async function handleReceiptUpload(e) {
     e.preventDefault();
-    if (!receiptFile) return;
+    if (!receiptFile || uploading) return;
     setUploading(true);
     try {
       const formData = new FormData();
       formData.append('file', receiptFile);
       formData.append('amount', request.fee_amount);
       await api.upload(`/payments/${request.id}/receipt?guest_email=${guestEmail}`, formData);
+
+      // Clear the form so a second click on the (now-hidden) button can't
+      // resubmit the same file. Status alone doesn't change on upload —
+      // it stays 'for_payment' until the treasurer verifies — so we rely
+      // on hasPendingPayment (recomputed after load()) to swap the form
+      // for a confirmation message.
+      setReceiptFile(null);
+      if (receiptInputRef.current) receiptInputRef.current.value = '';
       await load();
     } catch (err) {
       setError(err.message);
@@ -86,6 +95,8 @@ export default function RequestStatusPage() {
       </div>
     );
   }
+
+  const hasPendingPayment = request.payments?.some((p) => p.status === 'pending');
 
   return (
     <div className="page">
@@ -139,7 +150,13 @@ export default function RequestStatusPage() {
           </div>
         )}
 
-        {['for_payment', 'payment_rejected'].includes(request.status) && (
+        {['for_payment', 'payment_rejected'].includes(request.status) && hasPendingPayment && (
+          <div className="notice">
+            <p>Receipt uploaded — waiting for the treasurer to verify it. We'll notify you once it's confirmed.</p>
+          </div>
+        )}
+
+        {['for_payment', 'payment_rejected'].includes(request.status) && !hasPendingPayment && (
           <form onSubmit={handleReceiptUpload}>
             <h2>Pay the fee</h2>
             <p className="muted">Fee: ₱{request.fee_amount}. Upload your receipt for the treasurer to verify.</p>
@@ -147,6 +164,7 @@ export default function RequestStatusPage() {
               <label htmlFor="receipt">Receipt</label>
               <input
                 id="receipt"
+                ref={receiptInputRef}
                 type="file"
                 accept="image/*,.pdf"
                 required
