@@ -486,6 +486,118 @@ a:focus-visible {
   color: var(--ink-muted);
 }
 
+/* ---------- Confirmation modal ---------- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 42, 34, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  z-index: 100;
+}
+
+.modal {
+  background: var(--paper-raised);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 26rem;
+  box-shadow: 0 12px 32px rgba(30, 42, 34, 0.18);
+}
+
+.modal-title {
+  margin-bottom: 0.5rem;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.25rem;
+}
+
+/* ---------- Court gallery (tourism/facilities) ----------
+   Unlike the document ledgers, this content is genuinely photographic —
+   a card grid is the right fit here, not a hairline-divided list. */
+.court-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.court-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.court-card-photo {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--hairline);
+  display: block;
+}
+
+.court-card-photo-placeholder {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: var(--primary-tint);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+  font-size: 0.95rem;
+}
+
+.court-card-body {
+  padding: 0.9rem 1rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+}
+
+.court-card-type {
+  font-size: 0.75rem;
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.court-card-name {
+  font-family: var(--font-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.court-card-location {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.court-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+}
+
+.court-card-price {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
 @media (max-width: 640px) {
   .masthead-nav {
     display: none;

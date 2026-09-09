@@ -72,6 +72,15 @@ export default function RequestStatusPage() {
     }
   }
 
+  async function viewDocument(docId) {
+    try {
+      const { url } = await api.get(`/requests/${id}/documents/${docId}/url?guest_email=${guestEmail}`);
+      window.open(url, '_blank', 'noopener');
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   if (error) {
     return (
       <div className="page">
@@ -113,6 +122,21 @@ export default function RequestStatusPage() {
             <StatusTag status={request.status} />
           </div>
         </div>
+
+        {request.request_documents?.length > 0 && (
+          <div className="ledger" style={{ marginBottom: '1.5rem' }}>
+            {request.request_documents.map((doc) => (
+              <div className="ledger-row" key={doc.id}>
+                <div className="ledger-row-main">
+                  <span className="ledger-row-title">{doc.file_kind.replace(/_/g, ' ')}</span>
+                </div>
+                <button className="btn-link" onClick={() => viewDocument(doc.id)}>
+                  View
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {request.status !== 'claimed' && (
           <div className="notice" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem' }}>

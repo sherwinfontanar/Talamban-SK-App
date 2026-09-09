@@ -29,11 +29,17 @@ export const api = {
       body: JSON.stringify(body),
     }).then(handle),
 
-  upload: (path, formData) =>
+  upload: (path, formData, method = 'POST') =>
     fetch(`${API_URL}${path}`, {
-      method: 'POST',
-      headers: { ...authHeaders() }, // don't set Content-Type — browser sets multipart boundary
+      method, // don't set Content-Type — browser sets multipart boundary
+      headers: { ...authHeaders() },
       body: formData,
+    }).then(handle),
+
+  del: (path) =>
+    fetch(`${API_URL}${path}`, {
+      method: 'DELETE',
+      headers: { ...authHeaders() },
     }).then(handle),
 };
 
@@ -46,4 +52,13 @@ export function getCurrentUser() {
 export function logout() {
   localStorage.removeItem('sk_token');
   localStorage.removeItem('sk_user');
+}
+
+export function formatDate(isoString) {
+  if (!isoString) return '—';
+  return new Date(isoString).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }

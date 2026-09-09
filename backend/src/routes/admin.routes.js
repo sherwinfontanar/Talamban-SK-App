@@ -5,16 +5,45 @@ import { attachUser, requireRole } from '../middleware/auth.js';
 const router = Router();
 router.use(attachUser, requireRole('secretary', 'kagawad', 'treasurer'));
 
-// GET /admin/dashboard
+const RANGE_MS = {
+  day: 24 * 60 * 60 * 1000,
+  week: 7 * 24 * 60 * 60 * 1000,
+  month: 30 * 24 * 60 * 60 * 1000,
+};
+
+function rangeStartFor(range) {
+  const ms = RANGE_MS[range];
+  return ms ? new Date(Date.now() - ms).toISOString() : null;
+}
+
+// GET /admin/dashboard?range=day|week|month|all
 // Basic counts for the transparency dashboard. Optimize with a Postgres
 // view or materialized view later if this gets slow.
 router.get('/dashboard', async (req, res) => {
-  const { data: requests } = await supabase.from('requests').select('status, document_type, fee_amount, created_at, claimed_at');
+  const range = ['day', 'week', 'month'].includes(req.query.range) ? req.query.range : 'all';
+  const rangeStart = rangeStartFor(range);
+
+  let requestsQuery = supabase
+    .from('requests')
+    .select('status, document_type, created_at, claimed_at');
+  if (rangeStart) requestsQuery = requestsQuery.gte('created_at', rangeStart);
+  const { data: requests, error: requestsError } = await requestsQuery;
+  if (requestsError) return res.status(500).json({ error: requestsError.message });
+
+  // Fees collected = actual verified payments, not a request's claim status.
+  // A payment can be verified well before the resident picks up the
+  // document, so counting only 'claimed' requests understated this.
+  let paymentsQuery = supabase.from('payments').select('amount, verified_at').eq('status', 'verified');
+  if (rangeStart) paymentsQuery = paymentsQuery.gte('verified_at', rangeStart);
+  const { data: verifiedPayments, error: paymentsError } = await paymentsQuery;
+  if (paymentsError) return res.status(500).json({ error: paymentsError.message });
+
+  // Pending payments is a live queue size, not a historical stat — always
+  // shown as-is regardless of the selected range.
   const { data: pendingPayments } = await supabase.from('payments').select('id').eq('status', 'pending');
 
   const byStatus = {};
   const byDocType = {};
-  let totalCollected = 0;
   let turnaroundSumMs = 0;
   let turnaroundCount = 0;
 
@@ -22,13 +51,15 @@ router.get('/dashboard', async (req, res) => {
     byStatus[r.status] = (byStatus[r.status] || 0) + 1;
     byDocType[r.document_type] = (byDocType[r.document_type] || 0) + 1;
     if (r.status === 'claimed' && r.claimed_at) {
-      totalCollected += Number(r.fee_amount || 0);
       turnaroundSumMs += new Date(r.claimed_at) - new Date(r.created_at);
       turnaroundCount += 1;
     }
   }
 
+  const totalCollected = (verifiedPayments ?? []).reduce((sum, p) => sum + Number(p.amount || 0), 0);
+
   res.json({
+    range,
     by_status: byStatus,
     by_document_type: byDocType,
     pending_payments_count: pendingPayments?.length ?? 0,

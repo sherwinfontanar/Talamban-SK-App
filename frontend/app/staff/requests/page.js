@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import Masthead from '../../components/Masthead';
 import StatusTag from '../../components/StatusTag';
-import { api } from '../../lib/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import { api, formatDate } from '../../lib/api';
 
 const FILTERS = [
   { value: '', label: 'All' },
@@ -16,9 +17,11 @@ export default function StaffRequestsPage() {
   const [requests, setRequests] = useState([]);
   const [filter, setFilter] = useState('');
   const [error, setError] = useState(null);
-  const [activeId, setActiveId] = useState(null); // which row has its reject-reason field open
-  const [reason, setReason] = useState('');
   const [claimCodeInput, setClaimCodeInput] = useState({});
+
+  // pendingAction holds the request the modal is currently confirming:
+  // { id, kind: 'approve' | 'reject' }
+  const [pendingAction, setPendingAction] = useState(null);
 
   async function load() {
     try {
@@ -38,8 +41,7 @@ export default function StaffRequestsPage() {
   async function review(id, decision, rejection_reason) {
     try {
       await api.patch(`/requests/${id}/review`, { decision, rejection_reason });
-      setActiveId(null);
-      setReason('');
+      setPendingAction(null);
       await load();
     } catch (err) {
       setError(err.message);
@@ -63,6 +65,8 @@ export default function StaffRequestsPage() {
       setError(err.message);
     }
   }
+
+  const activeRequest = pendingAction ? requests.find((r) => r.id === pendingAction.id) : null;
 
   return (
     <div className="page">
@@ -95,6 +99,7 @@ export default function StaffRequestsPage() {
             <thead>
               <tr>
                 <th>Reference</th>
+                <th>Date</th>
                 <th>Requester</th>
                 <th>Document</th>
                 <th>Files</th>
@@ -106,6 +111,7 @@ export default function StaffRequestsPage() {
               {requests.map((r) => (
                 <tr key={r.id}>
                   <td className="mono">{r.id.slice(0, 8)}</td>
+                  <td>{formatDate(r.created_at)}</td>
                   <td>{r.full_name}</td>
                   <td>{r.document_type.replace(/_/g, ' ')}</td>
                   <td>
@@ -125,33 +131,19 @@ export default function StaffRequestsPage() {
                     <StatusTag status={r.status} />
                   </td>
                   <td>
-                    {['submitted', 'under_review'].includes(r.status) && activeId !== r.id && (
+                    {['submitted', 'under_review'].includes(r.status) && (
                       <div className="table-actions">
-                        <button className="btn btn-primary btn-sm" onClick={() => review(r.id, 'approved')}>
+                        <button
+                          className="btn btn-primary btn-sm"
+                          onClick={() => setPendingAction({ id: r.id, kind: 'approve' })}
+                        >
                           Approve
                         </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setActiveId(r.id)}>
-                          Reject
-                        </button>
-                      </div>
-                    )}
-
-                    {activeId === r.id && (
-                      <div style={{ display: 'flex', gap: '0.5rem', minWidth: '220px' }}>
-                        <input
-                          placeholder="Reason for rejection"
-                          value={reason}
-                          onChange={(e) => setReason(e.target.value)}
-                        />
                         <button
                           className="btn btn-danger btn-sm"
-                          onClick={() => review(r.id, 'rejected', reason)}
-                          disabled={!reason}
+                          onClick={() => setPendingAction({ id: r.id, kind: 'reject' })}
                         >
-                          Confirm
-                        </button>
-                        <button className="btn-link" onClick={() => setActiveId(null)}>
-                          Cancel
+                          Reject
                         </button>
                       </div>
                     )}
@@ -177,6 +169,28 @@ export default function StaffRequestsPage() {
           </table>
         )}
       </main>
+
+      <ConfirmModal
+        open={pendingAction?.kind === 'approve'}
+        title="Approve this request?"
+        message={activeRequest ? `${activeRequest.full_name} — ${activeRequest.document_type.replace(/_/g, ' ')}` : undefined}
+        confirmLabel="Approve"
+        tone="primary"
+        onConfirm={() => review(pendingAction.id, 'approved')}
+        onClose={() => setPendingAction(null)}
+      />
+
+      <ConfirmModal
+        open={pendingAction?.kind === 'reject'}
+        title="Reject this request?"
+        message={activeRequest ? `${activeRequest.full_name} — ${activeRequest.document_type.replace(/_/g, ' ')}` : undefined}
+        confirmLabel="Reject"
+        tone="danger"
+        requireReason
+        reasonLabel="Reason for rejection (shown to the resident)"
+        onConfirm={(reason) => review(pendingAction.id, 'rejected', reason)}
+        onClose={() => setPendingAction(null)}
+      />
     </div>
   );
 }

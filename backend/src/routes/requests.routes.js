@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { nanoid } from 'nanoid';
 import QRCode from 'qrcode';
 import { supabase } from '../config/supabaseClient.js';
-import { attachUser, requireRole } from '../middleware/auth.js';
+import { attachUser, requireAuth, requireRole } from '../middleware/auth.js';
 import { sendStatusEmail, sendReadyForClaimEmail } from '../utils/email.js';
 import { sendPushToRequest } from '../utils/push.js';
 
@@ -143,8 +143,20 @@ router.post('/:id/documents', upload.single('file'), async (req, res) => {
   res.status(201).json({ document: doc });
 });
 
-// GET /requests/:id/documents/:docId/url  (staff only — signed URL to a private file)
-router.get('/:id/documents/:docId/url', requireRole('secretary', 'kagawad', 'treasurer'), async (req, res) => {
+// GET /requests/:id/documents/:docId/url  (staff, or the requester viewing their own file)
+router.get('/:id/documents/:docId/url', async (req, res) => {
+  const { data: request } = await supabase
+    .from('requests')
+    .select('id, user_id, guest_email')
+    .eq('id', req.params.id)
+    .single();
+
+  if (!request) return res.status(404).json({ error: 'Request not found' });
+
+  const isOwner = req.user?.id === request.user_id || req.query.guest_email === request.guest_email;
+  const isStaff = ['secretary', 'kagawad', 'treasurer'].includes(req.user?.role);
+  if (!isOwner && !isStaff) return res.status(403).json({ error: 'Not authorized to view this file' });
+
   const { data: doc } = await supabase
     .from('request_documents')
     .select('file_url')
@@ -158,6 +170,19 @@ router.get('/:id/documents/:docId/url', requireRole('secretary', 'kagawad', 'tre
   if (error) return res.status(500).json({ error: error.message });
 
   res.json({ url: data.signedUrl });
+});
+
+// GET /requests/mine  (logged-in resident — their own request history)
+// Placed before GET /:id so Express doesn't treat "mine" as an :id param.
+router.get('/mine', requireAuth, async (req, res) => {
+  const { data, error } = await supabase
+    .from('requests')
+    .select('*, payments(*)')
+    .eq('user_id', req.user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ requests: data });
 });
 
 // GET /requests/:id
@@ -181,7 +206,10 @@ router.get('/:id', async (req, res) => {
 // GET /requests  (staff only — list/filter queue)
 router.get('/', requireRole('secretary', 'kagawad', 'treasurer'), async (req, res) => {
   const { status, document_type } = req.query;
-  let query = supabase.from('requests').select('*').order('created_at', { ascending: true });
+  let query = supabase
+    .from('requests')
+    .select('*, request_documents(*)')
+    .order('created_at', { ascending: true });
   if (status) query = query.eq('status', status);
   if (document_type) query = query.eq('document_type', document_type);
 

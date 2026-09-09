@@ -20,7 +20,7 @@ export default function LoginPage() {
       const data = await api.post('/auth/login', form);
       localStorage.setItem('sk_token', data.token);
       localStorage.setItem('sk_user', JSON.stringify(data.user));
-      router.push(data.user.role === 'resident' ? '/' : '/staff/dashboard');
+      router.push(data.user.role === 'resident' ? '/account' : '/staff/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {

@@ -2,13 +2,15 @@
 
 import { useEffect, useState } from 'react';
 import Masthead from '../../components/Masthead';
-import { api } from '../../lib/api';
+import ConfirmModal from '../../components/ConfirmModal';
+import { api, formatDate } from '../../lib/api';
 
 export default function StaffPaymentsPage() {
   const [payments, setPayments] = useState([]);
   const [error, setError] = useState(null);
-  const [activeId, setActiveId] = useState(null);
-  const [reason, setReason] = useState('');
+
+  // pendingAction: { id, kind: 'verify' | 'reject' }
+  const [pendingAction, setPendingAction] = useState(null);
 
   async function load() {
     try {
@@ -35,13 +37,14 @@ export default function StaffPaymentsPage() {
   async function verify(id, decision, rejection_reason) {
     try {
       await api.patch(`/payments/${id}/verify`, { decision, rejection_reason });
-      setActiveId(null);
-      setReason('');
+      setPendingAction(null);
       await load();
     } catch (err) {
       setError(err.message);
     }
   }
+
+  const activePayment = pendingAction ? payments.find((p) => p.id === pendingAction.id) : null;
 
   return (
     <div className="page">
@@ -63,6 +66,7 @@ export default function StaffPaymentsPage() {
             <thead>
               <tr>
                 <th>Reference</th>
+                <th>Date</th>
                 <th>Requester</th>
                 <th>Document</th>
                 <th>Amount</th>
@@ -74,6 +78,7 @@ export default function StaffPaymentsPage() {
               {payments.map((p) => (
                 <tr key={p.id}>
                   <td className="mono">{p.request_id.slice(0, 8)}</td>
+                  <td>{formatDate(p.created_at)}</td>
                   <td>{p.requests?.full_name}</td>
                   <td>{p.requests?.document_type?.replace(/_/g, ' ')}</td>
                   <td>₱{p.amount}</td>
@@ -83,34 +88,20 @@ export default function StaffPaymentsPage() {
                     </button>
                   </td>
                   <td>
-                    {activeId !== p.id ? (
-                      <div className="table-actions">
-                        <button className="btn btn-primary btn-sm" onClick={() => verify(p.id, 'verified')}>
-                          Verify
-                        </button>
-                        <button className="btn btn-danger btn-sm" onClick={() => setActiveId(p.id)}>
-                          Reject
-                        </button>
-                      </div>
-                    ) : (
-                      <div style={{ display: 'flex', gap: '0.5rem', minWidth: '220px' }}>
-                        <input
-                          placeholder="Reason for rejection"
-                          value={reason}
-                          onChange={(e) => setReason(e.target.value)}
-                        />
-                        <button
-                          className="btn btn-danger btn-sm"
-                          onClick={() => verify(p.id, 'rejected', reason)}
-                          disabled={!reason}
-                        >
-                          Confirm
-                        </button>
-                        <button className="btn-link" onClick={() => setActiveId(null)}>
-                          Cancel
-                        </button>
-                      </div>
-                    )}
+                    <div className="table-actions">
+                      <button
+                        className="btn btn-primary btn-sm"
+                        onClick={() => setPendingAction({ id: p.id, kind: 'verify' })}
+                      >
+                        Verify
+                      </button>
+                      <button
+                        className="btn btn-danger btn-sm"
+                        onClick={() => setPendingAction({ id: p.id, kind: 'reject' })}
+                      >
+                        Reject
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -118,6 +109,28 @@ export default function StaffPaymentsPage() {
           </table>
         )}
       </main>
+
+      <ConfirmModal
+        open={pendingAction?.kind === 'verify'}
+        title="Verify this payment?"
+        message={activePayment ? `${activePayment.requests?.full_name} — ₱${activePayment.amount}` : undefined}
+        confirmLabel="Verify"
+        tone="primary"
+        onConfirm={() => verify(pendingAction.id, 'verified')}
+        onClose={() => setPendingAction(null)}
+      />
+
+      <ConfirmModal
+        open={pendingAction?.kind === 'reject'}
+        title="Reject this payment?"
+        message={activePayment ? `${activePayment.requests?.full_name} — ₱${activePayment.amount}` : undefined}
+        confirmLabel="Reject"
+        tone="danger"
+        requireReason
+        reasonLabel="Reason for rejection (shown to the resident)"
+        onConfirm={(reason) => verify(pendingAction.id, 'rejected', reason)}
+        onClose={() => setPendingAction(null)}
+      />
     </div>
   );
 }
