@@ -8,6 +8,7 @@ import paymentsRoutes from './routes/payments.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import pushRoutes from './routes/push.routes.js';
 import courtsRoutes from './routes/courts.routes.js';
+import trailsRoutes from './routes/trails.routes.js';
 
 dotenv.config();
 
@@ -24,6 +25,7 @@ app.use('/payments', paymentsRoutes);
 app.use('/admin', adminRoutes);
 app.use('/push', pushRoutes);
 app.use('/courts', courtsRoutes);
+app.use('/trails', trailsRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {

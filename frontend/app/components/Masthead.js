@@ -47,6 +47,7 @@ export default function Masthead({ nav = 'resident' }) {
         {nav === 'resident' && (
           <nav className="masthead-nav">
             <Link href="/courts">Courts</Link>
+            <Link href="/trails">Trails</Link>
             <Link href="/request/status">Check status</Link>
             {user ? (
               <>
@@ -68,6 +69,7 @@ export default function Masthead({ nav = 'resident' }) {
             <Link href="/staff/requests">Requests</Link>
             <Link href="/staff/payments">Payments</Link>
             <Link href="/staff/courts">Courts</Link>
+            <Link href="/staff/trails">Trails</Link>
             {user && <span className="muted">{user.full_name}</span>}
             <button className="btn-link" onClick={() => setConfirmingLogout(true)}>
               Log out

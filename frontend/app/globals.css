@@ -508,6 +508,12 @@ a:focus-visible {
   box-shadow: 0 12px 32px rgba(30, 42, 34, 0.18);
 }
 
+.modal--wide {
+  max-width: 32rem;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
 .modal-title {
   margin-bottom: 0.5rem;
 }
@@ -608,4 +614,154 @@ a:focus-visible {
   .table {
     font-size: 0.82rem;
   }
+}
+
+/* ---------- Trail guides ----------
+   Genuinely sequential content — a numbered timeline fits here, unlike
+   the court gallery (browsable, unordered) or the document ledgers
+   (a log, not a route to follow step by step). */
+.trail-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+}
+
+.trail-card-photo {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: var(--hairline);
+  display: block;
+}
+
+.trail-card-photo-placeholder {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--primary-tint);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-serif);
+}
+
+.trail-card-body {
+  padding: 1rem 1.1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.trail-card-name {
+  font-family: var(--font-serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.trail-card-meta {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.trail-overview {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  padding: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.trail-overview-meta {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin: 0.75rem 0 1rem;
+  font-size: 0.9rem;
+}
+
+.trail-overview-meta-item strong {
+  display: block;
+  color: var(--ink-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.trail-getting-there {
+  border-left: 3px solid var(--gold);
+  background: var(--gold-tint);
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius);
+  margin-top: 1rem;
+}
+
+.checkpoint {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.checkpoint-badge {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.checkpoint-connector {
+  flex-shrink: 0;
+  width: 32px;
+  display: flex;
+  justify-content: center;
+}
+
+.checkpoint-connector::after {
+  content: '';
+  width: 2px;
+  flex: 1;
+  background: var(--hairline-strong);
+  min-height: 1.5rem;
+}
+
+.checkpoint-body {
+  flex: 1;
+  padding-bottom: 0.5rem;
+}
+
+.checkpoint-photos {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+  padding-bottom: 0.25rem;
+}
+
+.checkpoint-photo {
+  width: 140px;
+  height: 100px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  background: var(--hairline);
+}
+
+.checkpoint-travel-note {
+  border-left: 3px solid var(--gold);
+  background: var(--gold-tint);
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
 }
