@@ -40,12 +40,13 @@ export default function Masthead({ nav = 'resident' }) {
           </span>
           <span>
             <div className="masthead-title">Barangay Talamban SK</div>
-            <div className="masthead-subtitle">Document Requests</div>
+            <div className="masthead-subtitle">Community Services</div>
           </span>
         </Link>
 
         {nav === 'resident' && (
           <nav className="masthead-nav">
+            <Link href="/request">Documents</Link>
             <Link href="/courts">Courts</Link>
             <Link href="/trails">Trails</Link>
             <Link href="/request/status">Check status</Link>
@@ -70,6 +71,7 @@ export default function Masthead({ nav = 'resident' }) {
             <Link href="/staff/payments">Payments</Link>
             <Link href="/staff/courts">Courts</Link>
             <Link href="/staff/trails">Trails</Link>
+            <Link href="/staff/news">News</Link>
             {user && <span className="muted">{user.full_name}</span>}
             <button className="btn-link" onClick={() => setConfirmingLogout(true)}>
               Log out

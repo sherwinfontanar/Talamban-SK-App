@@ -9,6 +9,8 @@ import adminRoutes from './routes/admin.routes.js';
 import pushRoutes from './routes/push.routes.js';
 import courtsRoutes from './routes/courts.routes.js';
 import trailsRoutes from './routes/trails.routes.js';
+import newsRoutes from './routes/news.routes.js';
+import barangayStatsRoutes from './routes/barangayStats.routes.js';
 
 dotenv.config();
 
@@ -26,6 +28,8 @@ app.use('/admin', adminRoutes);
 app.use('/push', pushRoutes);
 app.use('/courts', courtsRoutes);
 app.use('/trails', trailsRoutes);
+app.use('/news', newsRoutes);
+app.use('/barangay-stats', barangayStatsRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {

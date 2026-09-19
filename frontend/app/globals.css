@@ -765,3 +765,131 @@ a:focus-visible {
   font-size: 0.9rem;
   margin-top: 0.5rem;
 }
+
+/* ---------- News feed / landing page ---------- */
+.stat-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--primary);
+  background: var(--paper-raised);
+  border-radius: var(--radius);
+  padding: 0.9rem 1.1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat-banner-value {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin-right: 0.5rem;
+}
+
+.stat-banner-label {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+}
+
+.stat-banner-source {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+  text-decoration: none;
+}
+
+.stat-banner-source:hover {
+  text-decoration: underline;
+}
+
+.boundary-map {
+  height: 320px;
+  width: 100%;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 0.25rem;
+}
+
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin: 1.25rem 0 2rem;
+}
+
+.quick-link-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  padding: 0.9rem 1rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.quick-link-card:hover {
+  border-color: var(--primary);
+}
+
+.quick-link-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.quick-link-note {
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+}
+
+.news-row {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--hairline);
+  text-decoration: none;
+  color: inherit;
+  align-items: flex-start;
+}
+
+.news-row-photo {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: var(--radius);
+  flex-shrink: 0;
+  background: var(--hairline);
+}
+
+.news-row-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.news-row-title {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.news-row-meta {
+  font-size: 0.78rem;
+  color: var(--ink-muted);
+}
+
+.news-row-excerpt {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

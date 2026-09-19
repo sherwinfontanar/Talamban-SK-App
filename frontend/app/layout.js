@@ -6,8 +6,8 @@ const plexSans = IBM_Plex_Sans({ subsets: ['latin'], variable: '--font-sans', we
 const plexMono = IBM_Plex_Mono({ subsets: ['latin'], variable: '--font-mono', weight: ['500'] });
 
 export const metadata = {
-  title: 'Barangay Talamban SK — Document Requests',
-  description: 'Request barangay documents online, skip the line at claim time.',
+  title: 'Barangay Talamban SK',
+  description: 'News, document requests, sports courts, and hiking trail guides for Barangay Talamban SK.',
 };
 
 export default function RootLayout({ children }) {
