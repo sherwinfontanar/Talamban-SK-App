@@ -11,6 +11,7 @@ import courtsRoutes from './routes/courts.routes.js';
 import trailsRoutes from './routes/trails.routes.js';
 import newsRoutes from './routes/news.routes.js';
 import barangayStatsRoutes from './routes/barangayStats.routes.js';
+import facilitiesRoutes from './routes/facilities.routes.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/courts', courtsRoutes);
 app.use('/trails', trailsRoutes);
 app.use('/news', newsRoutes);
 app.use('/barangay-stats', barangayStatsRoutes);
+app.use('/facilities', facilitiesRoutes);
 
 // Basic error handler
 app.use((err, req, res, next) => {

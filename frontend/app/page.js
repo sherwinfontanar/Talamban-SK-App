@@ -16,6 +16,7 @@ const QUICK_LINKS = [
   { href: '/request', label: 'Request a document', note: 'Barangay cert, indigency, jobseeker' },
   { href: '/courts', label: 'Sports courts', note: 'Basketball, volleyball, badminton, pickleball' },
   { href: '/trails', label: 'Hiking trails', note: 'Guides to the local trailheads' },
+  { href: '/facilities', label: 'Gym & co-working', note: 'Check in and see who\'s there' },
 ];
 
 export default function HomePage() {

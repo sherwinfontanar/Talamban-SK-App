@@ -107,6 +107,7 @@ code,
 .masthead {
   border-bottom: 1px solid var(--hairline);
   background: var(--paper-raised);
+  position: relative;
 }
 
 .masthead-inner {
@@ -168,6 +169,18 @@ code,
 
 .masthead-nav a:hover {
   border-bottom-color: var(--ink);
+}
+
+.masthead-menu-btn {
+  display: none;
+  background: none;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-family: var(--font-sans);
+  color: var(--ink);
+  padding: 0.4rem 0.7rem;
+  cursor: pointer;
 }
 
 /* ---------- Ledger list (document picker, queues) ---------- */
@@ -605,9 +618,43 @@ a:focus-visible {
 }
 
 @media (max-width: 640px) {
+  .masthead-menu-btn {
+    display: block;
+  }
+
   .masthead-nav {
     display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    background: var(--paper-raised);
+    border-bottom: 1px solid var(--hairline);
+    padding: 0.25rem 1.25rem;
+    z-index: 50;
+    box-shadow: 0 8px 16px rgba(30, 42, 34, 0.08);
   }
+
+  .masthead-nav.is-open {
+    display: flex;
+  }
+
+  .masthead-nav a,
+  .masthead-nav button,
+  .masthead-nav span {
+    width: 100%;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid var(--hairline);
+    text-align: left;
+  }
+
+  .masthead-nav button.btn-link {
+    text-decoration: none;
+  }
+
   .ledger-row {
     flex-wrap: wrap;
   }
@@ -811,6 +858,40 @@ a:focus-visible {
   border-radius: var(--radius);
   overflow: hidden;
   margin-bottom: 0.25rem;
+}
+
+.facility-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.facility-card {
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius);
+  background: var(--paper-raised);
+  padding: 1rem 1.1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.facility-card-label {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 0.35rem;
+}
+
+.facility-card-count {
+  font-family: var(--font-mono);
+  font-size: 1.8rem;
+  color: var(--primary-dark);
+}
+
+.facility-card-capacity {
+  font-size: 1.1rem;
+  color: var(--ink-muted);
 }
 
 .quick-links {

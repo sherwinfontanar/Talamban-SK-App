@@ -12,6 +12,7 @@ export default function Masthead({ nav = 'resident' }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Read on mount only — localStorage isn't available during SSR, and this
   // doesn't need to react to changes elsewhere on the page.
@@ -23,6 +24,7 @@ export default function Masthead({ nav = 'resident' }) {
     logout();
     setUser(null);
     setConfirmingLogout(false);
+    setMenuOpen(false);
     router.push(nav === 'staff' ? '/login' : '/');
   }
 
@@ -34,7 +36,7 @@ export default function Masthead({ nav = 'resident' }) {
   return (
     <header className="masthead">
       <div className="masthead-inner">
-        <Link href={brandHref} className="masthead-brand">
+        <Link href={brandHref} className="masthead-brand" onClick={() => setMenuOpen(false)}>
           <span className="masthead-seal" aria-hidden="true">
             SK
           </span>
@@ -44,34 +46,46 @@ export default function Masthead({ nav = 'resident' }) {
           </span>
         </Link>
 
+        <button
+          type="button"
+          className="masthead-menu-btn"
+          aria-expanded={menuOpen}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          {menuOpen ? '✕ Close' : '☰ Menu'}
+        </button>
+
         {nav === 'resident' && (
-          <nav className="masthead-nav">
-            <Link href="/request">Documents</Link>
-            <Link href="/courts">Courts</Link>
-            <Link href="/trails">Trails</Link>
-            <Link href="/request/status">Check status</Link>
+          <nav className={`masthead-nav${menuOpen ? ' is-open' : ''}`}>
+            <Link href="/request" onClick={() => setMenuOpen(false)}>Documents</Link>
+            <Link href="/courts" onClick={() => setMenuOpen(false)}>Courts</Link>
+            <Link href="/trails" onClick={() => setMenuOpen(false)}>Trails</Link>
+            <Link href="/facilities" onClick={() => setMenuOpen(false)}>Facilities</Link>
+            <Link href="/request/status" onClick={() => setMenuOpen(false)}>Check status</Link>
             {user ? (
               <>
-                <Link href="/account">My requests</Link>
+                <Link href="/account" onClick={() => setMenuOpen(false)}>My requests</Link>
                 <span className="muted">{user.full_name}</span>
                 <button className="btn-link" onClick={() => setConfirmingLogout(true)}>
                   Log out
                 </button>
               </>
             ) : (
-              <Link href="/login">Log in</Link>
+              <Link href="/login" onClick={() => setMenuOpen(false)}>Log in</Link>
             )}
           </nav>
         )}
 
         {nav === 'staff' && (
-          <nav className="masthead-nav">
-            <Link href="/staff/dashboard">Dashboard</Link>
-            <Link href="/staff/requests">Requests</Link>
-            <Link href="/staff/payments">Payments</Link>
-            <Link href="/staff/courts">Courts</Link>
-            <Link href="/staff/trails">Trails</Link>
-            <Link href="/staff/news">News</Link>
+          <nav className={`masthead-nav${menuOpen ? ' is-open' : ''}`}>
+            <Link href="/staff/dashboard" onClick={() => setMenuOpen(false)}>Dashboard</Link>
+            <Link href="/staff/requests" onClick={() => setMenuOpen(false)}>Requests</Link>
+            <Link href="/staff/payments" onClick={() => setMenuOpen(false)}>Payments</Link>
+            <Link href="/staff/courts" onClick={() => setMenuOpen(false)}>Courts</Link>
+            <Link href="/staff/trails" onClick={() => setMenuOpen(false)}>Trails</Link>
+            <Link href="/staff/news" onClick={() => setMenuOpen(false)}>News</Link>
+            <Link href="/staff/facilities" onClick={() => setMenuOpen(false)}>Facilities</Link>
             {user && <span className="muted">{user.full_name}</span>}
             <button className="btn-link" onClick={() => setConfirmingLogout(true)}>
               Log out
