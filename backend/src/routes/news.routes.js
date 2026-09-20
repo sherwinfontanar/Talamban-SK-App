@@ -110,4 +110,60 @@ router.delete('/:id', requireRole('secretary'), async (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Comments ----------
+
+// GET /news/:id/comments  (public)
+router.get('/:id/comments', async (req, res) => {
+  const { data, error } = await supabase
+    .from('news_comments')
+    .select('*')
+    .eq('post_id', req.params.id)
+    .order('created_at', { ascending: true });
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ comments: data });
+});
+
+// POST /news/:id/comments  (public — guest with a name, or a logged-in resident/staff account)
+router.post('/:id/comments', async (req, res) => {
+  const { body } = req.body;
+  if (!body?.trim()) return res.status(400).json({ error: 'body is required' });
+
+  let author_name = req.body.author_name?.trim();
+
+  if (req.user) {
+    // Logged-in accounts don't need to type a name — use the one on file.
+    const { data: user } = await supabase.from('users').select('full_name').eq('id', req.user.id).single();
+    author_name = user?.full_name || author_name;
+  }
+
+  if (!author_name) return res.status(400).json({ error: 'author_name is required when not logged in' });
+
+  const { data, error } = await supabase
+    .from('news_comments')
+    .insert({
+      post_id: req.params.id,
+      user_id: req.user?.id ?? null,
+      author_name,
+      body: body.trim(),
+    })
+    .select()
+    .single();
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json({ comment: data });
+});
+
+// DELETE /news/:id/comments/:commentId  (secretary only — moderation)
+router.delete('/:id/comments/:commentId', requireRole('secretary'), async (req, res) => {
+  const { error } = await supabase
+    .from('news_comments')
+    .delete()
+    .eq('id', req.params.commentId)
+    .eq('post_id', req.params.id);
+
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
 export default router;
