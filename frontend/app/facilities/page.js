@@ -12,6 +12,32 @@ const FACILITY_META = {
   coworking_table: { label: 'Co-working tables', note: 'Shared seating.' },
 };
 
+function getDeviceLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Your browser does not support location — check-in requires it.'));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy: position.coords.accuracy,
+        });
+      },
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          reject(new Error('Location access was denied — enable it in your browser settings to check in.'));
+        } else {
+          reject(new Error('Could not get your location. Make sure location services are on and try again.'));
+        }
+      },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+    );
+  });
+}
+
 export default function FacilitiesPage() {
   const [occupancy, setOccupancy] = useState(null);
   const [mySessions, setMySessions] = useState({}); // facility -> session, only when logged in
@@ -54,7 +80,8 @@ export default function FacilitiesPage() {
     setBusy({ ...busy, [facility]: true });
     setError(null);
     try {
-      const { log } = await api.post('/facilities/checkin', { facility });
+      const location = await getDeviceLocation();
+      const { log } = await api.post('/facilities/checkin', { facility, ...location });
       setMySessions((prev) => ({ ...prev, [facility]: log }));
       loadOccupancy();
     } catch (err) {
@@ -140,7 +167,7 @@ export default function FacilitiesPage() {
                           onClick={() => setPendingAction({ facility: o.facility, kind: 'checkin' })}
                           disabled={busy[o.facility]}
                         >
-                          {busy[o.facility] ? 'Checking in…' : 'Check in'}
+                          {busy[o.facility] ? 'Checking your location…' : 'Check in'}
                         </button>
                       )}
                     </div>
@@ -155,7 +182,7 @@ export default function FacilitiesPage() {
       <ConfirmModal
         open={pendingAction?.kind === 'checkin'}
         title={`Check in to ${pendingAction ? FACILITY_META[pendingAction.facility].label : ''}?`}
-        message="This marks you as currently at this facility until you check out."
+        message="We'll check that you're at the barangay hall using your device's location, then mark you as checked in until you check out."
         confirmLabel="Check in"
         tone="primary"
         onConfirm={() => handleCheckIn(pendingAction.facility)}

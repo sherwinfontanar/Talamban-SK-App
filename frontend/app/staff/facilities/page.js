@@ -1,99 +1,145 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import Masthead from '../components/Masthead';
-import { api, getCurrentUser } from '../lib/api';
+import Masthead from '../../components/Masthead';
+import { api, formatDate } from '../../lib/api';
 
-const FACILITY_META = {
-  gym: { label: 'Gym', note: 'No stated capacity — informational count only.' },
-  coworking_computer: { label: 'Co-working computers', note: 'Sessions auto-expire after 2 hours.' },
-  coworking_table: { label: 'Co-working tables', note: 'Shared seating.' },
+const FACILITY_LABELS = {
+  gym: 'Gym',
+  coworking_computer: 'Co-working computer',
+  coworking_table: 'Co-working table',
 };
 
-export default function FacilitiesPage() {
-  const [occupancy, setOccupancy] = useState(null);
-  const [mySessions, setMySessions] = useState({}); // facility -> session, only when logged in
+function elapsedLabel(checkedInAt) {
+  const ms = Date.now() - new Date(checkedInAt).getTime();
+  const mins = Math.floor(ms / 60000);
+  if (mins < 60) return `${mins}m`;
+  return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+export default function StaffFacilitiesPage() {
+  const [sessions, setSessions] = useState(null);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState({});
+  const [busyId, setBusyId] = useState(null);
 
-  const user = getCurrentUser();
+  const [geofenceForm, setGeofenceForm] = useState(null);
+  const [geofenceSaving, setGeofenceSaving] = useState(false);
+  const [geofenceSaved, setGeofenceSaved] = useState(false);
 
-  function loadOccupancy() {
+  function load() {
     api
-      .get('/facilities/occupancy')
-      .then((data) => setOccupancy(data.occupancy))
+      .get('/facilities/active')
+      .then((data) => setSessions(data.sessions))
       .catch((err) => setError(err.message));
   }
 
-  function loadMine() {
-    if (!user) return;
+  function loadGeofence() {
     api
-      .get('/facilities/mine')
-      .then((data) => {
-        const byFacility = {};
-        for (const s of data.sessions) byFacility[s.facility] = s;
-        setMySessions(byFacility);
-      })
-      .catch(() => {}); // not critical to first render
+      .get('/facilities/geofence')
+      .then((data) =>
+        setGeofenceForm({
+          latitude: data.geofence.latitude,
+          longitude: data.geofence.longitude,
+          radius_meters: data.geofence.radius_meters,
+        })
+      )
+      .catch((err) => setError(err.message));
   }
 
   useEffect(() => {
-    loadOccupancy();
-    loadMine();
-    const interval = setInterval(loadOccupancy, 20000); // keep counts reasonably live
+    load();
+    loadGeofence();
+    const interval = setInterval(load, 20000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleCheckIn(facility) {
-    setBusy({ ...busy, [facility]: true });
+  async function handleGeofenceSubmit(e) {
+    e.preventDefault();
+    setGeofenceSaving(true);
+    setGeofenceSaved(false);
     setError(null);
     try {
-      const { log } = await api.post('/facilities/checkin', { facility });
-      setMySessions((prev) => ({ ...prev, [facility]: log }));
-      loadOccupancy();
+      await api.patch('/facilities/geofence', geofenceForm);
+      setGeofenceSaved(true);
     } catch (err) {
       setError(err.message);
     } finally {
-      setBusy((prev) => ({ ...prev, [facility]: false }));
+      setGeofenceSaving(false);
     }
   }
 
-  async function handleCheckOut(facility) {
-    const session = mySessions[facility];
-    if (!session) return;
-    setBusy({ ...busy, [facility]: true });
-    setError(null);
+  async function handleCheckOut(id) {
+    setBusyId(id);
     try {
-      await api.post(`/facilities/checkout/${session.id}`, {});
-      setMySessions((prev) => {
-        const next = { ...prev };
-        delete next[facility];
-        return next;
-      });
-      loadOccupancy();
+      await api.post(`/facilities/checkout/${id}`, {});
+      load();
     } catch (err) {
       setError(err.message);
     } finally {
-      setBusy((prev) => ({ ...prev, [facility]: false }));
+      setBusyId(null);
     }
   }
 
   return (
     <div className="page">
-      <Masthead nav="resident" />
+      <Masthead nav="staff" />
       <main className="content content--wide">
-        <h1>Barangay hall facilities</h1>
-        <p className="muted">Check in when you start using the gym or co-working space, and check out when you leave.</p>
+        <h1>Facilities</h1>
+        <p className="muted">
+          Everyone currently checked in. Computer sessions past 2 hours no longer count toward capacity
+          automatically, but still show here until checked out — use this to clear them out.
+        </p>
 
-        {!user && (
-          <div className="notice">
-            <p>
-              <Link href="/login">Log in</Link> to check in — this keeps sessions tied to an actual
-              account rather than a typed-in name.
+        {geofenceForm && (
+          <form
+            onSubmit={handleGeofenceSubmit}
+            className="content--form"
+            style={{ padding: 0, margin: '0 0 2rem', paddingBottom: '1.5rem', borderBottom: '1px solid var(--hairline)' }}
+          >
+            <h2>Check-in location</h2>
+            <p className="muted" style={{ fontSize: '0.85rem' }}>
+              Residents must be within this radius to check in. Browser GPS can drift, especially
+              indoors — widen the radius if legitimate check-ins are getting rejected on-site.
             </p>
-          </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="g-lat">Latitude</label>
+                <input
+                  id="g-lat"
+                  type="number"
+                  step="any"
+                  value={geofenceForm.latitude}
+                  onChange={(e) => setGeofenceForm({ ...geofenceForm, latitude: e.target.value })}
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="g-lng">Longitude</label>
+                <input
+                  id="g-lng"
+                  type="number"
+                  step="any"
+                  value={geofenceForm.longitude}
+                  onChange={(e) => setGeofenceForm({ ...geofenceForm, longitude: e.target.value })}
+                />
+              </div>
+              <div className="field" style={{ flex: 1 }}>
+                <label htmlFor="g-radius">Radius (meters)</label>
+                <input
+                  id="g-radius"
+                  type="number"
+                  min="10"
+                  value={geofenceForm.radius_meters}
+                  onChange={(e) => setGeofenceForm({ ...geofenceForm, radius_meters: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <button type="submit" className="btn btn-primary" disabled={geofenceSaving}>
+              {geofenceSaving ? 'Saving…' : 'Save'}
+            </button>
+            {geofenceSaved && <span className="muted" style={{ marginLeft: '0.75rem' }}>Saved.</span>}
+          </form>
         )}
 
         {error && (
@@ -102,47 +148,40 @@ export default function FacilitiesPage() {
           </div>
         )}
 
-        {!occupancy && !error && <p className="muted">Loading…</p>}
+        {!sessions && !error && <p className="muted">Loading…</p>}
 
-        {occupancy && (
-          <div className="facility-grid">
-            {occupancy.map((o) => {
-              const meta = FACILITY_META[o.facility];
-              const mySession = mySessions[o.facility];
-              return (
-                <div className="facility-card" key={o.facility}>
-                  <span className="facility-card-label">{meta.label}</span>
-                  <span className="facility-card-count">
-                    {o.count}
-                    {o.capacity !== null && <span className="facility-card-capacity"> / {o.capacity}</span>}
-                  </span>
-                  <span className="field-hint">{meta.note}</span>
+        {sessions?.length === 0 && <div className="empty-state">No one is currently checked in.</div>}
 
-                  {user && (
-                    <div style={{ marginTop: '0.75rem' }}>
-                      {mySession ? (
-                        <button
-                          className="btn btn-outline btn-sm"
-                          onClick={() => handleCheckOut(o.facility)}
-                          disabled={busy[o.facility]}
-                        >
-                          {busy[o.facility] ? 'Checking out…' : 'Check out'}
-                        </button>
-                      ) : (
-                        <button
-                          className="btn btn-primary btn-sm"
-                          onClick={() => handleCheckIn(o.facility)}
-                          disabled={busy[o.facility]}
-                        >
-                          {busy[o.facility] ? 'Checking in…' : 'Check in'}
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        {sessions?.length > 0 && (
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Facility</th>
+                <th>Name</th>
+                <th>Checked in</th>
+                <th>Elapsed</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sessions.map((s) => (
+                <tr key={s.id}>
+                  <td>
+                    {FACILITY_LABELS[s.facility]}
+                    {!s.still_active && <span className="muted"> (expired)</span>}
+                  </td>
+                  <td>{s.visitor_name}</td>
+                  <td>{formatDate(s.checked_in_at)}</td>
+                  <td>{elapsedLabel(s.checked_in_at)}</td>
+                  <td>
+                    <button className="btn btn-outline btn-sm" onClick={() => handleCheckOut(s.id)} disabled={busyId === s.id}>
+                      {busyId === s.id ? 'Checking out…' : 'Check out'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </main>
     </div>
