@@ -16,7 +16,7 @@ export default function NewRequestPage() {
   const router = useRouter();
   const documentType = params.get('type') || 'barangay_cert';
 
-  const [form, setForm] = useState({ full_name: '', address: '', age: '', guest_email: '' });
+  const [form, setForm] = useState({ full_name: '', address: '', age: '', purpose: '', guest_email: '' });
   const [proofOfBilling, setProofOfBilling] = useState(null);
   const [validId, setValidId] = useState(null);
   const [error, setError] = useState(null);
@@ -93,6 +93,17 @@ export default function NewRequestPage() {
               min="0"
               value={form.age}
               onChange={(e) => setForm({ ...form, age: e.target.value })}
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="purpose">Purpose</label>
+            <input
+              id="purpose"
+              required
+              placeholder="e.g. For employment, for scholarship application"
+              value={form.purpose}
+              onChange={(e) => setForm({ ...form, purpose: e.target.value })}
             />
           </div>
 

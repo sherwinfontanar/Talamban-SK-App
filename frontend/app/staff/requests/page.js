@@ -112,7 +112,10 @@ export default function StaffRequestsPage() {
                 <tr key={r.id}>
                   <td className="mono">{r.id.slice(0, 8)}</td>
                   <td>{formatDate(r.created_at)}</td>
-                  <td>{r.full_name}</td>
+                  <td>
+                    {r.full_name}
+                    {r.purpose && <div className="ledger-row-meta">{r.purpose}</div>}
+                  </td>
                   <td>{r.document_type.replace(/_/g, ' ')}</td>
                   <td>
                     {r.request_documents?.length ? (

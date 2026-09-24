@@ -117,6 +117,7 @@ export default function RequestStatusPage() {
           <div className="ledger-row">
             <div className="ledger-row-main">
               <span className="ledger-row-title">{request.document_type.replace(/_/g, ' ')}</span>
+              {request.purpose && <span className="ledger-row-meta">Purpose: {request.purpose}</span>}
               <span className="ledger-row-meta mono">{request.id}</span>
             </div>
             <StatusTag status={request.status} />

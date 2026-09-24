@@ -43,10 +43,10 @@ function statusUrlFor(request) {
 // POST /requests
 // Resident (guest or logged in) submits a new document request.
 router.post('/', async (req, res) => {
-  const { document_type, full_name, address, age, guest_email, birthdate } = req.body;
+  const { document_type, full_name, address, age, guest_email, purpose } = req.body;
 
-  if (!document_type || !full_name || !address || !age) {
-    return res.status(400).json({ error: 'document_type, full_name, address, and age are required' });
+  if (!document_type || !full_name || !address || !age || !purpose) {
+    return res.status(400).json({ error: 'document_type, full_name, address, age, and purpose are required' });
   }
   if (!req.user && !guest_email) {
     return res.status(400).json({ error: 'guest_email is required when not logged in' });
@@ -84,6 +84,7 @@ router.post('/', async (req, res) => {
       full_name,
       address,
       age,
+      purpose: purpose.trim(),
       fee_amount: settings.fee_amount,
       status: 'submitted',
     })
